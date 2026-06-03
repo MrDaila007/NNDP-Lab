@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Data & checkpoints
+data/LoveDA/
+data/*.zip
+checkpoints/
+logs/
+
+# Env
+.env
+*.local.yaml
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Conda installer
+*.sh

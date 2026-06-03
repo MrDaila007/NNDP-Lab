@@ -1,0 +1,43 @@
+data:
+  dataset: loveda          # loveda | sentinel2
+  root: ./data/LoveDA
+  num_classes: 7
+  image_size: 448          # must be divisible by 14 (DINOv2 patch size)
+  in_channels: 3           # 3 for LoveDA RGB, 13 for Sentinel-2
+  num_workers: 4
+  batch_size: 8
+
+model:
+  backbone: dinov2_vitb14  # dinov2_vits14 | dinov2_vitb14 | dinov2_vitl14
+  decoder_dim: 256
+  frozen_backbone: true    # freeze backbone, train only decoder initially
+
+pseudo_labels:
+  confidence_threshold: 0.95
+  min_threshold: 0.70      # lower bound as training progresses
+  threshold_decay: 0.025   # reduce threshold each self-training round
+
+self_training:
+  n_rounds: 5
+  epochs_per_round: 10
+  warmup_epochs: 5         # train on initial k-means labels
+  ema_decay: 0.999
+  unfreeze_round: 3        # unfreeze backbone after this many rounds
+
+optimizer:
+  lr: 1e-4
+  backbone_lr: 1e-5
+  weight_decay: 1e-4
+
+augmentation:
+  weak:
+    flip_prob: 0.5
+  strong:
+    color_jitter: 0.5
+    scale_range: [0.5, 1.0]
+    blur_prob: 0.5
+
+logging:
+  log_dir: ./logs
+  save_dir: ./checkpoints
+  log_interval: 10
