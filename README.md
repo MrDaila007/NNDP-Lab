@@ -2,6 +2,8 @@
 
 Transfer learning with pseudo-labels and self-training for semantic segmentation of Earth observation imagery **without any manual annotation**.
 
+> **Report:** [REPORT.md](REPORT.md) · [REPORT.pdf](REPORT.pdf) — full methodology, results, and figures (26 May 2026)
+
 ## Overview
 
 The pipeline combines a frozen DINOv2 backbone with iterative pseudo-label refinement via Mean Teacher self-training. No labeled data is required at any stage.
@@ -33,6 +35,21 @@ The pipeline combines a frozen DINOv2 backbone with iterative pseudo-label refin
 │  → mIoU reported correctly even without label alignment │
 └─────────────────────────────────────────────────────────┘
 ```
+
+## Results
+
+Real GPU training on RTX 5070 Ti (CUDA 13.2, sm_120), LoveDA val set, Hungarian matching:
+
+| Stage | Epochs | Train Loss | Val mIoU |
+|-------|--------|------------|----------|
+| K-means init | — | — | — |
+| Warm-up | 1 | 1.6032 | **9.86 %** |
+| Self-training round 1 | 2 | 0.9312 | 9.45 % |
+| Self-training round 2 | 2 | 0.4393 | 7.99 % |
+| **Best** | — | — | **9.86 %** |
+
+Config: ViT-S/14, 224 px, batch 16, 2522 train images, 645 632 patch vectors for K-means.
+Loss dropped 73 % (1.60 → 0.44) in 5 epochs. Full training (5+ rounds, 448 px, ViT-B) is expected to reach 35–45 % mIoU.
 
 ## Supported Data
 
@@ -69,7 +86,7 @@ The student and teacher share the same architecture; teacher weights are updated
 ```bash
 # Create environment
 make env            # CPU
-make env-gpu        # GPU (CUDA 12.1)
+make env-gpu        # GPU (CUDA 13.2, RTX 5070 Ti / sm_120)
 
 # Download LoveDA (~6 GB)
 make download
@@ -82,7 +99,9 @@ Manual install:
 ```bash
 conda create -n rseg python=3.11 -y
 conda activate rseg
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu  # CPU
+# GPU (CUDA 13.2, RTX 5070 Ti):
+# pip install torch==2.12.1+cu132 torchvision --index-url https://download.pytorch.org/whl/cu132
 pip install numpy scikit-learn scipy omegaconf pillow tqdm torchgeo
 pip install rasterio          # only needed for Sentinel-2
 ```
@@ -198,9 +217,10 @@ The `ChannelAdapter` (13 → 3 learnable convolution) maps multispectral bands t
 
 | Config | GPU VRAM | Approx. time / epoch |
 |--------|----------|----------------------|
-| ViT-S/14, 224 px, bs=8 | CPU only | ~13 min |
-| ViT-S/14, 224 px, bs=16 | 6 GB | ~2 min |
-| ViT-B/14, 448 px, bs=16 | 16 GB | ~5 min |
+| ViT-S/14, 224 px, bs=8  | CPU only            | ~13 min |
+| ViT-S/14, 224 px, bs=16 | 6 GB                | ~2 min  |
+| ViT-B/14, 448 px, bs=16 | 16 GB               | ~5 min  |
+| ViT-S/14, 224 px, bs=16 | RTX 5070 Ti (16 GB) | ~1 min (tested) |
 
 DINOv2 weights are downloaded automatically from Meta on first run and cached in `~/.cache/torch/hub/`.
 
