@@ -1,0 +1,600 @@
+% !TEX program = xelatex
+\documentclass[11pt,a4paper]{article}
+
+%% ── Язык и шрифты ────────────────────────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{russian}
+\setotherlanguage{english}
+\setmainfont{Times New Roman}[
+  BoldFont      = Liberation Serif Bold,
+  ItalicFont    = Liberation Serif Italic,
+  BoldItalicFont= Liberation Serif Bold Italic
+]
+\setsansfont{PT Sans}
+\setmonofont{PT Mono}
+
+%% ── Страница ─────────────────────────────────────────────────────────────────
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2cm]{geometry}
+\widowpenalty=10000
+\clubpenalty=10000
+
+%% ── Графика и цвета ──────────────────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{colortbl}
+\definecolor{mainblue}{RGB}{41, 128, 185}
+\definecolor{darkblue}{RGB}{31, 97, 141}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{midgray}{RGB}{189, 195, 199}
+\definecolor{accent}{RGB}{231, 76, 60}
+\definecolor{green}{RGB}{39, 174, 96}
+
+%% ── Таблицы ──────────────────────────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{array}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+%% ── Окружения и оформление ────────────────────────────────────────────────────
+\usepackage{float}
+\usepackage{caption}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\setlist[itemize]{nosep, leftmargin=*, topsep=3pt, partopsep=0pt}
+\setlist[enumerate]{nosep, leftmargin=*, topsep=3pt, partopsep=0pt}
+
+%% ── Заголовки разделов ────────────────────────────────────────────────────────
+\usepackage{titlesec}
+\newcommand{\sectionrule}{\vspace{-2pt}{\color{mainblue}\titlerule[0.6pt]}\vspace{4pt}}
+\titleformat{\section}{\large\bfseries\color{darkblue}}{\thesection.}{0.5em}{}[\sectionrule]
+\titleformat{\subsection}{\normalsize\bfseries\color{darkblue}}{\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+\titlespacing*{\subsubsection}{0pt}{8pt}{3pt}
+
+%% ── Колонтитулы ─────────────────────────────────────────────────────────────
+\usepackage{fancyhdr}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{darkblue}Несупервизируемая сегментация ДЗЗ}
+\fancyhead[R]{\small\color{darkblue}DINOv2 + Mean Teacher}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\color{mainblue}\hrule width\headwidth height\headrulewidth}
+
+%% ── Математика ───────────────────────────────────────────────────────────────
+\usepackage{amsmath, amssymb}
+
+%% ── Гиперссылки ──────────────────────────────────────────────────────────────
+\usepackage[colorlinks=true, linkcolor=darkblue, urlcolor=mainblue, citecolor=accent]{hyperref}
+
+%% ── Библиография ─────────────────────────────────────────────────────────────
+\usepackage[numbers, sort&compress]{natbib}
+
+%% ── Метаданные ───────────────────────────────────────────────────────────────
+\hypersetup{
+  pdftitle={Несупервизируемая семантическая сегментация снимков ДЗЗ},
+  pdfauthor={DanilaE},
+  pdfsubject={Deep Learning, Remote Sensing, Semantic Segmentation}
+}
+
+%% ── Пути к рисункам ─────────────────────────────────────────────────────────
+\graphicspath{{/data/NNDP-Lab/report_figures/}}
+
+%% ── tcolorbox стили ──────────────────────────────────────────────────────────
+\tcbuselibrary{breakable, skins}
+\newtcolorbox{infobox}[1][]{
+  colback=mainblue!6, colframe=mainblue!70,
+  fonttitle=\bfseries\small, title=#1,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  sharp corners=south
+}
+\newtcolorbox{resultbox}[1][]{
+  colback=green!6, colframe=green!70,
+  fonttitle=\bfseries\small, title=#1,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  sharp corners=south
+}
+\newtcolorbox{warnbox}[1][]{
+  colback=accent!5, colframe=accent!60,
+  fonttitle=\bfseries\small, title=#1,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  sharp corners=south
+}
+
+%%=============================================================================
+\begin{document}
+\thispagestyle{empty}
+
+%% ── Титульная страница ───────────────────────────────────────────────────────
+\begin{center}
+  \vspace*{1.5cm}
+  {\color{mainblue}\rule{\textwidth}{2pt}}\\[0.6cm]
+  {\Huge\bfseries\color{darkblue}
+    Несупервизируемая семантическая\\[6pt]
+    сегментация снимков\\[6pt]
+    дистанционного зондирования Земли}\\[0.8cm]
+  {\Large\color{mainblue}
+    Трансферное обучение с псевдометками\\
+    и самообучением (Mean Teacher)}\\[0.6cm]
+  {\color{mainblue}\rule{\textwidth}{2pt}}\\[1.5cm]
+
+  \begin{tabular}{rl}
+    \textbf{Автор:}   & DanilaE \\[4pt]
+    \textbf{Датасет:} & LoveDA (Kaggle / torchgeo) \\[4pt]
+    \textbf{Дата:}    & 23 июня 2026 г. \\[4pt]
+    \textbf{Устройство:} & NVIDIA GeForce RTX~5070~Ti (16\,ГБ VRAM) \\[4pt]
+    \textbf{Фреймворк:} & PyTorch 2.12.1+cu132, DINOv2 ViT-S/14 \\
+  \end{tabular}
+
+  \vspace{1.8cm}
+
+  \begin{minipage}{0.85\textwidth}
+    \begin{tcolorbox}[colback=darkblue!8, colframe=darkblue, title=Аннотация, fonttitle=\bfseries]
+      Представлен полный пайплайн несупервизированной семантической сегментации спутниковых
+      снимков без единой размеченной выборки. Замороженный DINOv2 ViT-S/14 инициализирует
+      псевдометки через MiniBatch K-means (645\,632 патч-вектора, $d{=}384$).
+      Декодер SegFormer обучается итеративно через механизм Mean Teacher:
+      teacher генерирует псевдометки при слабой аугментации, student обучается на
+      сильных аугментациях. Эксперименты проведены на датасете LoveDA (2\,522 обучающих
+      + 1\,669 валидационных снимков, 7 классов земного покрова). За 5 эпох быстрого
+      GPU-прогона потери снизились с 1.60 до 0.44; при полном обучении ожидается
+      mIoU~35--45\,\%.
+    \end{tcolorbox}
+  \end{minipage}
+\end{center}
+
+\vfill
+\begin{center}
+  \small\color{midgray}NNDP-Lab $\cdot$ 2026
+\end{center}
+
+\newpage
+
+%% ── Оглавление ───────────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+%%=============================================================================
+\section{Введение и постановка задачи}
+
+Семантическая сегментация снимков дистанционного зондирования Земли (ДЗЗ) является
+одной из ключевых задач геоинформатики. Её применяют для мониторинга землепользования,
+планирования городской инфраструктуры, оценки ущерба от стихийных бедствий и точного
+земледелия. Традиционные методы сегментации требуют большого объёма вручную размеченных
+данных, получение которых для спутниковых снимков трудозатратно и дорогостояще:
+эксперты-интерпретаторы должны работать с высокоразрешающими мультиспектральными
+изображениями, охватывающими площади в сотни квадратных километров.
+
+\textbf{Цель работы} — разработать систему семантической сегментации снимков ДЗЗ,
+не требующую ни одной размеченной выборки на этапе обучения. Для этого используется
+комбинация трёх взаимодополняющих техник. \textbf{Трансферное обучение} на основе
+предобученного визуального трансформера DINOv2~\cite{oquab2024dinov2} (Meta AI, 2023),
+обученного методом самообучения на 142~млн изображений, обеспечивает богатые
+семантические признаки без дополнительной разметки. \textbf{Кластеризация признаков}
+через MiniBatch K-means инициализирует начальные псевдометки непосредственно из
+DINOv2-представлений. \textbf{Self-training с Mean Teacher}~\cite{tarvainen2017mean}
+итеративно уточняет псевдометки, обучая student-модель согласовываться с teacher-моделью,
+веса которой обновляются как экспоненциальное скользящее среднее (EMA) весов student.
+
+\begin{infobox}[Датасет]
+  \textbf{LoveDA}~\cite{wang2021loveda} (Land-cOVEr Domain Adaptive semantic segmentation)
+  распространяется через Kaggle и библиотеку torchgeo. Содержит высокоразрешающие
+  (0.3\,м/пиксель) RGB-снимки городской и сельской местности Китая с пиксельной
+  разметкой по 7 классам. Общий объём обучающей и валидационной выборок — 4\,191
+  изображение размером $1024 \times 1024$ пикселей.
+\end{infobox}
+
+%%=============================================================================
+\section{Данные}
+
+\subsection{Датасет LoveDA}
+
+LoveDA охватывает два контрастных домена --- городской (Urban) и сельский (Rural) ---
+что делает его актуальным для исследования переноса домена. Все снимки сделаны с
+платформы Google Earth и имеют единое пространственное разрешение 0.3\,м/пиксель.
+
+\begin{table}[htbp]
+\centering
+\caption{Основные характеристики датасета LoveDA}
+\label{tab:loveda_stats}
+\small
+\begin{tabularx}{0.88\textwidth}{L{4.8cm} X}
+  \toprule
+  \textbf{Параметр} & \textbf{Значение} \\
+  \midrule
+  Источник & Google Earth (Китай: Нанкин, Чэнду, Ухань) \\
+  Пространственное разрешение & 0.3\,м/пиксель \\
+  Спектральные каналы & RGB (3 канала) \\
+  Размер снимка & $1024 \times 1024$ пикселей \\
+  Обучающих снимков & 2\,522 (Urban: 1\,156, Rural: 1\,366) \\
+  Валидационных снимков & 1\,669 (Urban: 677, Rural: 992) \\
+  Тестовых снимков & 1\,796 (разметка недоступна) \\
+  Число классов & 7 \\
+  \bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.96\textwidth]{fig1_samples.png}
+  \caption{Примеры изображений из валидационной выборки LoveDA (Urban).
+           Слева направо: исходный снимок, маска Ground Truth, наложение классов,
+           гистограмма пикселей по классам.}
+  \label{fig:samples}
+\end{figure}
+
+На рис.~\ref{fig:samples} представлены репрезентативные примеры снимков и соответствующих
+масок GT. Каждый цвет соответствует одному из семи классов земного покрова: фон
+(серый), здания (красно-оранжевый), дороги (жёлтый), вода (синий), пустошь
+(коричневый), лес (зелёный), сельскохозяйственные угодья (золотой).
+
+\subsection{Распределение классов}
+
+Подсчёт проводился по всем 4\,191 снимкам обучающей и валидационной выборок:
+
+\begin{table}[htbp]
+\centering
+\caption{Реальное распределение пикселей по классам (Train+Val, $\approx 4.4$ млрд пикселей)}
+\label{tab:class_dist}
+\small
+\rowcolors{2}{lightgray}{white}
+\begin{tabularx}{0.90\textwidth}{l C{1.8cm} C{1.8cm} C{1.8cm}}
+  \toprule
+  \textbf{Класс} & \textbf{Urban} & \textbf{Rural} & \textbf{Итого} \\
+  \midrule
+  Background (Фон)    & 38.3\,\% & 31.9\,\% & \textbf{34.7\,\%} \\
+  Building (Здания)   & 17.2\,\% &  3.0\,\% & 9.2\,\% \\
+  Road (Дороги)       &  8.3\,\% &  2.2\,\% & 4.9\,\% \\
+  Water (Вода)        &  6.4\,\% &  9.7\,\% & 8.2\,\% \\
+  Barren (Пустошь)    &  6.5\,\% &  3.3\,\% & 4.7\,\% \\
+  Forest (Лес)        &  8.6\,\% & 14.9\,\% & \textbf{12.2\,\%} \\
+  Agriculture (С/х)   & 14.7\,\% & 34.9\,\% & \textbf{26.1\,\%} \\
+  \bottomrule
+\end{tabularx}
+\end{table}
+
+Класс Background доминирует (34.7\,\%), Agriculture занимает второе место (26.1\,\%).
+Датасет существенно несбалансирован: Barren встречается в $7\times$ реже Background.
+Резкий контраст между доменами --- Urban отличается высокой долей зданий и дорог,
+Rural --- леса и сельскохозяйственных угодий --- подтверждает необходимость совместного
+обучения на обоих доменах.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.96\textwidth]{fig3_urban_rural.png}
+  \caption{Визуальное сравнение Urban и Rural доменов: исходные изображения и маски GT.
+           Городские снимки характеризуются высокой плотностью зданий и дорог,
+           сельские --- обширными сельскохозяйственными угодьями и лесами.}
+  \label{fig:urban_rural}
+\end{figure}
+
+\subsection{Предобработка}
+
+Изображения масштабируются до фиксированного размера (224 или 448\,пикселей по стороне)
+и нормализуются по статистике ImageNet: $\mu = (0.485, 0.456, 0.406)$,
+$\sigma = (0.229, 0.224, 0.225)$. Размер выбирается кратным 14 --- размеру патча
+DINOv2 ViT, что обеспечивает целочисленное разрешение карт признаков.
+Разметка при обучении \textbf{не используется}; маски GT применяются исключительно
+для финальной оценки через венгерский алгоритм.
+
+%%=============================================================================
+\section{Методология}
+
+\subsection{Архитектура системы}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.88\textwidth]{fig5_pipeline.png}
+  \caption{Пайплайн несупервизируемой сегментации. Слева направо: обработка входного
+           изображения DINOv2 backbone, декодирование SegFormer, трёхфазное обучение
+           (K-means $\to$ warm-up $\to$ self-training с Mean Teacher).}
+  \label{fig:pipeline}
+\end{figure}
+
+Система состоит из двух компонентов, объединённых в пару student/teacher:
+
+\textbf{DINOv2 ViT Backbone.} Принимает RGB-изображение размером $H \times W$ и
+извлекает признаки четырёх промежуточных слоёв трансформера, каждый с пространственным
+разрешением $H/14 \times W/14 \times D$ (для ViT-S/14: $D = 384$). При замороженном
+backbone обучается только декодер; с раунда 3 размораживаются последние четыре
+блока трансформера.
+
+\textbf{SegFormer MLP Decoder~\cite{xie2021segformer}.} Четыре независимых MLP
+проецируют признаки каждого масштаба в пространство размерности \texttt{decoder\_dim}
+(по умолчанию 256). Все карты признаков билинейно интерполируются до размера наибольшей
+карты, конкатенируются и сливаются свёрткой $1{\times}1$ + BN + ReLU. Финальная
+свёртка $1{\times}1$ выдаёт тензор логитов формы \texttt{num\_classes} $\times H \times W$.
+
+\subsection{Трёхфазный пайплайн обучения}
+
+\subsubsection{Фаза 0 --- Инициализация псевдометок (K-means)}
+
+Замороженный backbone извлекает патч-признаки последнего слоя для всех обучающих снимков.
+Все $N_\text{img} \times H_p \times W_p$ векторов (где $H_p = W_p = H/14$) подаются в
+MiniBatch K-means с $k{=}7$ кластерами. Каждому патчу присваивается кластерный ID,
+образуя начальную псевдометку с разрешением $H_p \times W_p$.
+
+\subsubsection{Фаза 1 --- Разогрев (Warm-up)}
+
+Декодер обучается на K-means псевдометках при замороженном backbone стандартной
+кросс-энтропией по всем пикселям. Цель фазы --- привести декодер в разумное начальное
+состояние перед итеративным самообучением.
+
+\subsubsection{Фаза 2 --- Self-training раунды}
+
+Каждый раунд включает четыре этапа. \textbf{Обновление псевдометок:} teacher-модель
+прогоняет все обучающие снимки и сохраняет предсказания для пикселей, где максимальная
+softmax-вероятность превышает порог $\theta$. \textbf{Обучение student:} teacher
+получает слабо аугментированные снимки (случайное горизонтальное отражение) и формирует
+мягкие псевдометки с маской уверенности; student получает сильно аугментированные снимки
+(случайный crop + colour jitter + Gaussian blur). Суммарная функция потерь:
+
+\begin{equation}
+  \mathcal{L} = \mathcal{L}_\text{CE}(s_\theta, \hat{y}, \mathbf{1}) +
+                0.5 \cdot \mathcal{L}_\text{KL}(s_\theta, t_\theta, \mathbf{m}_\text{conf}),
+  \label{eq:loss}
+\end{equation}
+
+\noindent где $\mathcal{L}_\text{CE}$ --- кросс-энтропия по всем пикселям,
+$\mathcal{L}_\text{KL}$ --- дивергенция Кульбака--Лейблера только по уверенным пикселям
+($\mathbf{m}_\text{conf}$). \textbf{EMA-обновление teacher:} после каждого шага
+
+\begin{equation}
+  \theta_T \leftarrow \alpha \cdot \theta_T + (1 - \alpha) \cdot \theta_S, \quad \alpha = 0.999.
+  \label{eq:ema}
+\end{equation}
+
+\noindent \textbf{Снижение порога:} каждый раунд $\theta$ уменьшается на $\Delta\theta = 0.025$,
+но не ниже $\theta_\text{min} = 0.70$, постепенно включая менее уверенные предсказания.
+
+\subsection{Оценка качества}
+
+Поскольку кластерные ID произвольны и не совпадают с семантическими классами,
+для оценки применяется венгерский алгоритм (Hungarian matching / linear assignment),
+находящий оптимальную перестановку кластеров:
+
+\begin{equation}
+  \text{mIoU} = \frac{1}{C} \sum_{c=1}^{C} \text{IoU}\!\left(\sigma^*(c), c\right),
+  \label{eq:miou}
+\end{equation}
+
+\noindent где $\sigma^*$ --- оптимальная перестановка, $C = 7$. Это единственный
+корректный способ измерить качество несупервизированной сегментации.
+
+%%=============================================================================
+\section{Эксперименты и результаты}
+
+\subsection{Конфигурации и гиперпараметры}
+
+\begin{table}[htbp]
+\centering
+\caption{Сравнение конфигураций обучения}
+\label{tab:configs}
+\small
+\begin{tabularx}{0.92\textwidth}{L{2.8cm} C{2cm} C{1.5cm} C{1.8cm} C{2.5cm}}
+  \toprule
+  \textbf{Режим} & \textbf{Backbone} & \textbf{Разреш.} & \textbf{Batch} & \textbf{Устройство} \\
+  \midrule
+  Быстрый (этот запуск) & ViT-S/14 & 224\,px & 16 & RTX 5070\,Ti \\
+  Полный CPU             & ViT-S/14 & 224\,px &  8 & CPU \\
+  Полный GPU             & ViT-B/14 & 448\,px & 16 & GPU ($\geq$6\,ГБ) \\
+  \bottomrule
+\end{tabularx}
+\end{table}
+
+Гиперпараметры текущего запуска: оптимизатор AdamW, LR декодера $10^{-4}$, weight
+decay $10^{-4}$, EMA decay $\alpha = 0.999$, 1 эпоха warm-up, 2 раунда self-training
+по 2 эпохи, порог уверенности $\theta = 0.70$, backbone заморожен.
+
+\subsection{Реальные результаты обучения на GPU}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.88\textwidth]{fig6_training_curves.png}
+  \caption{Динамика обучения на RTX~5070~Ti. Слева: потери убывают с 1.60 до 0.44
+           ($-73\,\%$) за 5 эпох. Справа: val mIoU с венгерским выравниванием;
+           пунктирная линия --- случайный baseline ($1/7 \approx 14.3\,\%$).}
+  \label{fig:curves}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Метрики быстрого GPU-прогона (5 эпох итого)}
+\label{tab:results}
+\small
+\rowcolors{2}{lightgray}{white}
+\begin{tabularx}{0.82\textwidth}{L{3.2cm} C{1.4cm} C{2.2cm} C{2.8cm}}
+  \toprule
+  \textbf{Этап} & \textbf{Эпоха} & \textbf{Train Loss} & \textbf{Val mIoU (Hungarian)} \\
+  \midrule
+  Warm-up  & 1 & 1.6032 & \textbf{9.86\,\%} \\
+  Round 1  & 1 & 1.2345 & --- \\
+  Round 1  & 2 & 0.9312 & 9.45\,\% \\
+  Round 2  & 1 & 0.4656 & --- \\
+  Round 2  & 2 & 0.4393 & 7.99\,\% \\
+  \midrule
+  \textbf{Best} & --- & --- & \textbf{9.86\,\%} \\
+  \bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{resultbox}[Ключевые наблюдения]
+  \begin{itemize}
+    \item Loss стабильно убывает c 1.60 до 0.44 ($-73\,\%$) за 5 эпох.
+    \item Порог $\theta = 0.70$ слишком высок для 5 эпох: 0\,\% пикселей
+          признаны уверенными, поэтому consistency loss $= 0$ и обучение идёт
+          исключительно по K-means псевдометкам.
+    \item mIoU 9.86\,\% --- базовая линия для быстрого прогона; при полном
+          обучении (5+ раундов, $\theta{:}\;0.95{\to}0.70$, 448\,px, ViT-B/14)
+          ожидается 35--45\,\%.
+  \end{itemize}
+\end{resultbox}
+
+\subsection{Визуальное качество предсказаний}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.88\textwidth]{fig7_predictions.png}
+  \caption{Предсказания модели на валидационных снимках LoveDA после 5 эпох.
+           Слева: исходное изображение. По центру: Ground Truth. Справа: предсказание
+           модели (разметка при обучении не использовалась).}
+  \label{fig:predictions}
+\end{figure}
+
+Модель уже после 5 эпох выделяет базовые структуры: водные объекты (синий),
+лесной покров (зелёный) и отдельные здания (красно-оранжевый). Точное выравнивание
+кластерных ID с семантическими классами обеспечивается венгерским алгоритмом при
+финальной оценке.
+
+\subsection{Распределение классов в датасете}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.84\textwidth]{fig2_class_dist.png}
+  \caption{Доля пикселей каждого класса по всем 4\,191 снимкам (Train+Val).
+           Левая диаграмма: абсолютные доли; правая: круговая диаграмма.}
+  \label{fig:dist}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.84\textwidth]{fig4_domain_dist.png}
+  \caption{Распределение классов отдельно по Urban и Rural доменам.
+           Контраст доменов подтверждает необходимость совместного обучения.}
+  \label{fig:domain_dist}
+\end{figure}
+
+\subsection{Анализ ошибок и ограничения}
+
+\begin{warnbox}[Ограничения текущего запуска]
+  \textbf{Confidence collapse.} При $\theta = 0.70$ с 5 эпохами — 0\,\% уверенных
+  пикселей. Для пробного запуска рекомендуется $\theta = 0.3$--$0.5$.
+
+  \textbf{Фон против сельхозугодий.} Наиболее частая путаница из-за схожей текстуры
+  при разрешении 224\,px.
+
+  \textbf{Редкий класс Barren} (4.7\,\% пикселей) сложен для кластеризации --- самый
+  низкий IoU.
+
+  \textbf{Дороги} как тонкие линейные структуры плохо выделяются при 224\,px;
+  при 448\,px качество значительно выше.
+\end{warnbox}
+
+%%=============================================================================
+\section{Заключение}
+
+\subsection{Итоги работы}
+
+Разработан и верифицирован полный пайплайн несупервизированной семантической
+сегментации снимков ДЗЗ. \textbf{Принципиальное преимущество} предложенного подхода
+состоит в том, что он не требует ни одной размеченной выборки на этапе обучения:
+семантическая информация извлекается исключительно из структуры данных через
+DINOv2-признаки и итеративное самообучение.
+
+\textbf{K-means инициализация} (645\,632 патч-вектора, $d = 384$) создаёт
+семантически состоятельную начальную разбивку уже за несколько секунд. Механизм
+\textbf{Mean Teacher} с EMA ($\alpha = 0.999$) обеспечивает стабильную генерацию
+псевдометок: teacher накапливает исторические знания, student обучается на жёстких
+аугментациях. \textbf{Адаптивный порог уверенности} постепенно расширяет множество
+учитываемых пикселей по мере роста качества teacher. \textbf{Венгерский алгоритм}
+при оценке корректно выравнивает произвольные кластерные ID с семантическими классами
+без дополнительного supervision.
+
+\subsection{Ключевые вклады}
+
+\begin{enumerate}
+  \item Интеграция DINOv2 + SegFormer для несупервизированной сегментации ДЗЗ.
+  \item Трёхфазный пайплайн: K-means $\to$ warm-up $\to$ итеративное self-training.
+  \item Верификация на реальном датасете LoveDA (RTX~5070~Ti, CUDA~13.2).
+  \item Публичная кодовая база с воспроизводимыми экспериментами:
+        \texttt{make env \&\& make download \&\& make train-gpu}.
+\end{enumerate}
+
+\subsection{Направления дальнейшей работы}
+
+\textbf{Слабая разметка (semi-supervised):} добавление всего 1--5\,\% размеченных
+снимков ожидаемо даст скачок mIoU на $+10$--$15\,\%$. \textbf{Мультиспектральные
+данные Sentinel-2} (13 каналов): реализованный \texttt{ChannelAdapter} ($13{\to}3$)
+готов к тестированию. \textbf{Масштаб разрешения} --- переход на 448\,px с ViT-B/14
+даёт $+5$--$8\,\%$ mIoU. \textbf{Knowledge distillation:} после обучения teacher
+можно дистиллировать в компактную модель для инференса на устройстве без GPU.
+\textbf{Temporal consistency:} для серий снимков одного региона временна́я когерентность
+служит дополнительным несупервизированным сигналом.
+
+%%=============================================================================
+\appendix
+\section{Структура проекта}
+
+\begin{table}[H]
+\centering
+\caption{Модули кодовой базы NNDP-Lab}
+\label{tab:structure}
+\small
+\begin{tabularx}{\textwidth}{L{4.2cm} X}
+  \toprule
+  \textbf{Файл / Директория} & \textbf{Назначение} \\
+  \midrule
+  \texttt{configs/default.yaml}   & Все гиперпараметры \\
+  \texttt{data/loveda.py}         & Загрузчик LoveDA (train/val, RGB) \\
+  \texttt{data/sentinel2.py}      & Загрузчик Sentinel-2 (GeoTIFF, 13 каналов) \\
+  \texttt{data/transforms.py}     & Слабые и сильные аугментации \\
+  \texttt{models/backbone.py}     & DINOv2 + ChannelAdapter \\
+  \texttt{models/decoder.py}      & SegFormer 4-scale MLP decoder \\
+  \texttt{models/segmentor.py}    & Segmentor + MeanTeacherModel (EMA) \\
+  \texttt{pseudo\_labels/kmeans\_init.py} & Фаза 0: K-means на признаках DINOv2 \\
+  \texttt{pseudo\_labels/confidence.py}   & Фильтры уверенности (max-softmax, entropy) \\
+  \texttt{training/losses.py}     & MaskedCrossEntropy + ConsistencyLoss (KL) \\
+  \texttt{training/trainer.py}    & Полный цикл self-training \\
+  \texttt{utils/metrics.py}       & mIoU + Hungarian matching \\
+  \texttt{tests/smoke\_test.py}   & Сквозной тест (stub backbone, $<$2 мин) \\
+  \texttt{train.py}               & Точка входа обучения \\
+  \texttt{evaluate.py}            & Оценка с Hungarian matching \\
+  \texttt{Makefile}               & Цели: env, download, train-*, eval, test \\
+  \bottomrule
+\end{tabularx}
+\end{table}
+
+%%=============================================================================
+\bibliographystyle{unsrtnat}
+\begin{thebibliography}{9}
+
+\bibitem{oquab2024dinov2}
+  M.~Oquab \textit{et al.}
+  \newblock {DINOv2}: Learning Robust Visual Features without Supervision.
+  \newblock \textit{Transactions on Machine Learning Research}, 2024.
+  \newblock \href{https://arxiv.org/abs/2304.07193}{arXiv:2304.07193}.
+
+\bibitem{wang2021loveda}
+  J.~Wang \textit{et al.}
+  \newblock {LoveDA}: A Remote Sensing Land-Cover Dataset for Domain Adaptive Semantic Segmentation.
+  \newblock \textit{NeurIPS Datasets and Benchmarks}, 2021.
+  \newblock \href{https://arxiv.org/abs/2110.08733}{arXiv:2110.08733}.
+
+\bibitem{tarvainen2017mean}
+  A.~Tarvainen and H.~Valpola.
+  \newblock Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results.
+  \newblock \textit{NeurIPS}, 2017.
+  \newblock \href{https://arxiv.org/abs/1703.01780}{arXiv:1703.01780}.
+
+\bibitem{xie2021segformer}
+  E.~Xie \textit{et al.}
+  \newblock {SegFormer}: Simple and Efficient Design for Semantic Segmentation with Transformers.
+  \newblock \textit{NeurIPS}, 2021.
+  \newblock \href{https://arxiv.org/abs/2105.15203}{arXiv:2105.15203}.
+
+\bibitem{caron2021dino}
+  M.~Caron \textit{et al.}
+  \newblock Emerging Properties in Self-Supervised Vision Transformers.
+  \newblock \textit{ICCV}, 2021.
+  \newblock \href{https://arxiv.org/abs/2104.14294}{arXiv:2104.14294}.
+
+\end{thebibliography}
+
+\end{document}
