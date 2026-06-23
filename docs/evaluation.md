@@ -35,15 +35,27 @@ Loads `checkpoints/best_model.pth` by default.
 | **mIoU** | Mean Intersection over Union across all classes (primary metric) |
 | **per-class IoU** | IoU for each of the 7 LoveDA classes |
 
-## Results (RTX 5070 Ti, ViT-S/14, 224 px, 5 epochs)
+## Results
+
+### Full training (ViT-B/14, 448 px, RTX 5070 Ti, 2 h 18 min)
+
+| Stage | Epochs | Train Loss | Val mIoU | Confident px |
+|-------|--------|------------|----------|--------------|
+| Warm-up | 5 | 1.60 → 1.50 | **21.38 %** | — |
+| Round 1 (θ=0.95) | 10 | 1.13 → 1.02 | 14.05 % | 0.0 % |
+| Round 2 (θ=0.93) | 10 | 0.74 → 0.70 | 9.25 % | 0.0 % |
+| Round 3 (θ=0.90) | 10 | 0.50 → 0.40 | 7.83 % | 12.6 % |
+| Round 4 (θ=0.88) | 10 | 0.28 → 0.21 | 8.44 % | 59.3 % |
+| Round 5 (θ=0.85) | 10 | 0.16 → 0.15 | 8.56 % | 82.9 % |
+| **Best** | — | — | **21.38 %** | — |
+
+### Quick test (ViT-S/14, 224 px, 5 epochs)
 
 | Stage | Epochs | Loss | Val mIoU |
 |-------|--------|------|----------|
 | Warm-up | 1 | 1.603 | **9.86 %** |
 | Round 1 | 2 | 0.931 | 9.45 % |
 | Round 2 | 2 | 0.439 | 7.99 % |
-
-These are results from a quick 5-epoch test run. Full training (ViT-B/14, 448 px, 5 rounds × 10 epochs) is expected to reach **35–45 % mIoU**.
 
 ## Known limitations
 
