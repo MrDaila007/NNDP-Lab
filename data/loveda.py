@@ -14,6 +14,7 @@ _MEAN = [0.485, 0.456, 0.406]
 _STD  = [0.229, 0.224, 0.225]
 
 DOMAINS = ['Urban', 'Rural']
+CLASSES = ['Background', 'Building', 'Road', 'Water', 'Barren', 'Forest', 'Agriculture']
 
 
 class LoveDADataset(Dataset):
