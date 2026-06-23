@@ -17,9 +17,25 @@ Transfer learning with pseudo-labels and self-training for semantic segmentation
 
 ## Results
 
-Real GPU training on RTX 5070 Ti (CUDA 13.2), LoveDA val set, Hungarian matching:
+![Comparison](report_figures/fig_comparison.png)
 
-**Full training** (ViT-B/14, 448 px, RTX 5070 Ti, 2 h 18 min):
+### Quick test vs. Full training
+
+| | Quick Test | Full Training |
+|---|---|---|
+| Backbone | ViT-S/14 | **ViT-B/14** |
+| Resolution | 224 px | **448 px** |
+| K-means vectors | 645 632 (d=384) | **2 582 528 (d=768)** |
+| Warm-up | 1 epoch | **5 epochs** |
+| Self-training | 2 rounds × 2 ep | **5 rounds × 10 ep** |
+| Threshold θ | 0.70 (fixed) | **0.95 → 0.85** |
+| Training time | ~10 min | **2 h 18 min** |
+| Loss (start → end) | 1.60 → 0.44 | **1.60 → 0.15** |
+| **Best val mIoU** | **9.86 %** | **21.38 % (+116 %)** |
+
+### Full training dynamics (ViT-B/14, 448 px, 55 epochs)
+
+![Training curves](report_figures/fig6_training_curves.png)
 
 | Stage | Epochs | Train Loss | Val mIoU | Confident px |
 |-------|--------|------------|----------|--------------|
@@ -31,7 +47,7 @@ Real GPU training on RTX 5070 Ti (CUDA 13.2), LoveDA val set, Hungarian matching
 | Round 5 (θ=0.85) | 10 | 0.16 → 0.15 | 8.56 % | 82.9 % |
 | **Best** | — | — | **21.38 %** | — |
 
-**Quick test** (ViT-S/14, 224 px, 5 epochs): best mIoU **9.86 %**.
+> Best result achieved after warm-up. High initial threshold (θ₀=0.95) disabled consistency loss for rounds 1–2; lower θ₀=0.80–0.85 recommended for future runs.
 
 ## Quick Start
 
